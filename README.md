@@ -44,7 +44,9 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
 2. Copy the module to the Agisoft modules directory:
    - Copy the files project to folder `%programfiles%\Agisoft\modules\yolo11_detected`
    - Create the `run_scripts.py` script to `C:/Users/<username>/AppData/Local/Agisoft/Metashape Pro/scripts/`
+   - 
    How to install external Python module to Metashape Professional package https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package
+   
    file run_scripts.py:
    ```
    from modules import yolo11_detected
