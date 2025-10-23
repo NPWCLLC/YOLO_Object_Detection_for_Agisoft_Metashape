@@ -35,6 +35,9 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
 
 ### Windows Installation
 
+Open a terminal window.
+Press Win + R, type cmd, and press Enter.
+
 1. Update pip in the Agisoft Python environment:
    ```
    cd /d %programfiles%\Agisoft\python
@@ -55,14 +58,14 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
 3. Restart Metashape and wait for the automatic installation of required packages.
 
 4. Install CUDA-enabled PyTorch (for GPU acceleration):
-   Check in terminal your cuda version `nvidia-smi`.
+   Check in a terminal window your cuda version `nvidia-smi`.
    See your cuda version for torch and torchvision at https://pytorch.org/get-started/previous-versions/ for python 3.9
    ```
    cd /d %programfiles%\Agisoft\python
    python.exe -m pip uninstall -y torch torchvision
-   python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/<your cuda version> 
-   exemple for cuda 11.8 (python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118)
+   python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/<your cuda version>
    ```
+   `exemple for cuda 11.8 (python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118)`
 
 5. Restart Metashape.
 
