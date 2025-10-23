@@ -53,7 +53,7 @@ Press Win + R, type cmd, and press Enter.
    How to install external Python module to Metashape Professional package https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package
    
    file run_scripts.py:
-   ```
+   ```python
    from modules import yolo11_detected
    ```
 
