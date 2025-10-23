@@ -31,11 +31,11 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
   - torchvision
   - scikit-learn==1.6.1
 
-## Installation
+## 🚀 Installation
 
 ### Windows Installation
 
-[Download](https://github.com/NPWCLLC/YOLO_Object_Detection_for_Agisoft_Metashape/archive/refs/heads/main.zip) the module from this repository and follow these steps:
+📥[Download](https://github.com/NPWCLLC/YOLO_Object_Detection_for_Agisoft_Metashape/archive/refs/heads/main.zip) the module from this repository and follow these steps:
 
 Open a terminal window and to a directory Agisoft Python environment.
 Press Win + R, type cmd, and press Enter.
