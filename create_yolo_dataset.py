@@ -731,6 +731,15 @@ class WindowCreateYoloDataset(QtWidgets.QDialog):
 
             if self.train_on_user_data_enabled:
                 self.create_on_user_data()
+            else:
+                msg_box = QtWidgets.QMessageBox()
+                msg_box.setIcon(QtWidgets.QMessageBox.Warning)
+                msg_box.setWindowTitle("")
+                msg_box.setText("Please select the zone layer")
+                # Execute dialog
+                msg_box.exec_()
+
+
 
             self.results_time_total = time.time() - time_start
             self.show_results_dialog()
