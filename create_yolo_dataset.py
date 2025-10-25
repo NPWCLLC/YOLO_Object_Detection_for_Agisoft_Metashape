@@ -672,10 +672,6 @@ class WindowCreateYoloDataset(QtWidgets.QDialog):
         self.chunk = Metashape.app.document.chunk
         self.create_gui()
 
-        if os.path.exists(os.path.join(self.working_dir,"tiles")):
-            self.isLoadTiles = True
-            self.loadTilesCbox.setChecked(True)
-
         max_image_size = Metashape.app.settings.value("scripts/create_yolo_dataset/max_image_size")
         self.max_image_size = int(max_image_size) if max_image_size else 640
         self.maxSizeImageSpinBox.setValue(self.max_image_size)
