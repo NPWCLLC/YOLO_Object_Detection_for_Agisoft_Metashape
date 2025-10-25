@@ -47,7 +47,7 @@ shapely==2.0.7
 pathlib==1.0.1
 Rtree==1.3.0
 tqdm==4.67.1
-ultralytics
+ultralytics==8.3.84
 torch
 torchvision
 scikit-learn==1.6.1
