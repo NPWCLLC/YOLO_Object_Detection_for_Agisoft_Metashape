@@ -60,11 +60,11 @@ Open a terminal window and to a directory Agisoft Python environment.
     ├── create_yolo_dataset.py
     └── detect_yolo.py
    ```
-   - Create the `run_scripts.py` script to `C:/Users/<username>/AppData/Local/Agisoft/Metashape Pro/scripts/`
+   - Create a file with the .py extension `run_scripts.py` script to `C:/Users/<username>/AppData/Local/Agisoft/Metashape Pro/scripts/`
    
    How to install external Python module to Metashape Professional package https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package
    
-   file run_scripts.py:
+   Open file `run_scripts.py` in the text editor and add the following line:
    ```python
    from modules import yolo11_detected
    ```
