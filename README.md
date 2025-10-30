@@ -43,15 +43,25 @@ Open a terminal window and to a directory Agisoft Python environment.
 > %programfiles% - this is the location of the Agisoft Metashape installation
 
 1. Update pip in the Agisoft Python environment:
+   - go to the directory Agisoft Metashape
    ```
    cd /d %programfiles%\Agisoft\python
+   ```
+   - run update pip
+   ```
    python.exe -m pip install --upgrade pip
    ```
 
 2. Copy the module to the Agisoft modules directory:
    - Copy the files project to folder `%programfiles%\Agisoft\modules\yolo11_detected`
+   ```
+   %programfiles%\Agisoft\modules\yolo11_detected/
+    ├── __init__.py
+    ├── create_yolo_dataset.py
+    └── detect_yolo.py
+   ```
    - Create the `run_scripts.py` script to `C:/Users/<username>/AppData/Local/Agisoft/Metashape Pro/scripts/`
-   - 
+   
    How to install external Python module to Metashape Professional package https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package
    
    file run_scripts.py:
