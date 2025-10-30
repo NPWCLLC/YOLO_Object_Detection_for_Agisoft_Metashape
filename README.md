@@ -72,7 +72,8 @@ Open a terminal window and to a directory Agisoft Python environment.
 3. Restart Metashape and wait for the automatic installation of required packages.
 
 4. Install CUDA-enabled PyTorch (for GPU acceleration):
-   Check in a terminal window your cuda version `nvidia-smi`.
+
+   Check in a terminal window your cuda version `nvidia-smi`. 
    See your cuda version for torch and torchvision at https://pytorch.org/get-started/previous-versions/ for python 3.9
    ```
    cd /d %programfiles%\Agisoft\python
