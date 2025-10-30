@@ -39,48 +39,40 @@ else:
 
 def pandas_append(df, row, ignore_index=False):
     """
-    Appends a row or multiple rows to an existing pandas DataFrame.
+    Append a row or DataFrame to an existing DataFrame with additional type handling
+    and optional ignore_index functionality.
 
-    This function provides a flexible utility to append data to a pandas
-    DataFrame. The input row can be either another DataFrame, a pandas Series,
-    or a dictionary. Depending on the type of the input, it concatenates
-    or integrates the data appropriately to the DataFrame. If a DataFrame or
-    Series with all NA (Not Available) values is passed and the existing
-    DataFrame is not empty, the function ensures that such input rows are
-    not appended.
+    This function facilitates appending various types of inputs (`pd.DataFrame`,
+    `pd.Series`, `dict`) to an existing DataFrame with specific handling for
+    empty DataFrames and `NaN` entries. It enables flexibility in merging data
+    while maintaining the order of columns in the resulting DataFrame.
 
-    Parameters:
-        df (pd.DataFrame): The DataFrame to which the row data will be appended.
-        row (Union[pd.DataFrame, pd.Series, dict]): The row or rows to append,
-            which can be a DataFrame, Series, or dictionary. Its content will determine
-            how the data is appended.
-        ignore_index (bool): Whether to ignore the index values in the resulting
-            DataFrame during concatenation. Defaults to False.
-
-    Returns:
-        pd.DataFrame: The resulting DataFrame after appending the given row(s). It
-            reflects the combined structure of the original DataFrame and the
-            appended data.
-
-    Raises:
-        RuntimeError: If the input row type is unsupported or not one of
-            DataFrame, Series, or dictionary.
+    :param df: The original DataFrame to which the row or DataFrame will be appended.
+    :type df: pandas.DataFrame
+    :param row: The row or DataFrame to append. It can be a pandas DataFrame, pandas
+                Series, or dictionary.
+    :type row: Union[pandas.DataFrame, pandas.Series, dict]
+    :param ignore_index: Whether to ignore the index during concatenation. Defaults to False.
+    :type ignore_index: bool
+    :return: A new DataFrame with the `row` or DataFrame appended to the `df`.
+    :rtype: pandas.DataFrame
     """
 
     if isinstance(row, pd.DataFrame):
-
         if not df.empty and not row.isna().all().all():  # Additional check for NA
             result = pd.concat([df, row], ignore_index=True)
         else:
             result = row if df.empty else df
 
-        # result = pd.concat([df, row], ignore_index=ignore_index) # old
     elif isinstance(row, pd.core.series.Series):
         result = pd.concat([df, row.to_frame().T], ignore_index=ignore_index)
+
     elif isinstance(row, dict):
         result = pd.concat([df, pd.DataFrame(row, index=[0], columns=df.columns)])
+
     else:
         raise RuntimeError("pandas_append: unsupported row type - {}".format(type(row)))
+
     return result
 
 def getShapeVertices(shape):
@@ -118,7 +110,7 @@ def getShapeVertices(shape):
         for key in shape.geometry.coordinates[0]:
             for marker in chunk.markers:
                 if marker.key == key:
-                    if (not marker.position):
+                    if not marker.position:
                         raise Exception("Invalid shape vertex")
 
                     point = T.mulp(marker.position)
