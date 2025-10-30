@@ -38,8 +38,8 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
 📥[Download](https://github.com/NPWCLLC/YOLO_Object_Detection_for_Agisoft_Metashape/archive/refs/heads/main.zip) the module from this repository and follow these steps:
 
 Open a terminal window and to a directory Agisoft Python environment.
-Press Win + R, type cmd, and press Enter.
-
+> Press Win + R, type cmd, and press Enter.
+%programfiles% - this is the location of the Agisoft Metashape installation
 1. Update pip in the Agisoft Python environment:
    ```
    cd /d %programfiles%\Agisoft\python
