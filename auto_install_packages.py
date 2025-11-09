@@ -65,17 +65,17 @@ def update_pip():
 
 def get_cuda_version_from_nvidia_smi():
     """
-    Пытается получить версию CUDA, поддерживаемую драйвером,
-    с помощью команды nvidia-smi.
+    Trying to get the CUDA version supported by the driver,
+    using the nvidia-smi command.
     """
     try:
-        # Запускаем nvidia-smi и получаем вывод
+        # Run nvidia-smi and get the output
         result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         output = result.stdout
-        # print(output) # Для отладки
+        # print(output) # For debugging
 
-        # Ищем строку с CUDA версией, например, "CUDA Version: 12.1" или "CUDA Version: 11.8"
-        # Регулярное выражение для поиска "CUDA Version: X.Y"
+        # We are looking for a string with a CUDA version, for example, "CUDA Version: 12.1" or "CUDA Version: 11.8"
+        # Regular expression for searching for "CUDA Version: X.Y"
         match = re.search(r'CUDA Version:\s*(\d+)\.(\d+)', output)
         if match:
             major, minor = int(match.group(1)), int(match.group(2))
@@ -83,17 +83,17 @@ def get_cuda_version_from_nvidia_smi():
             return f"https://download.pytorch.org/whl/cu{major}{minor}"
 
         else:
-            print("Не удалось найти версию CUDA в выводе nvidia-smi.")
+            print("Couldn't find the CUDA version in the nvidia-smi output.")
             return "https://download.pytorch.org/whl/cpu"
 
     except FileNotFoundError:
-        raise "nvidia-smi не найден. Убедитесь, что драйверы NVIDIA установлены и nvidia-smi доступен в PATH."
+        raise "nvidia-smi was not found. Make sure that the NVIDIA drivers are installed and nvidia-smi is available in the PATH."
 
     except subprocess.CalledProcessError:
-        raise "Ошибка при выполнении nvidia-smi."
+        raise "Error when executing nvidia-smi."
 
     except Exception as e:
-        raise f"Произошла ошибка при попытке получить версию CUDA: {e}"
+        raise f"An error occurred while trying to get the version CUDA: {e}"
 
 def is_package_installed(package_name, version=None):
     """
@@ -189,9 +189,6 @@ if __name__ == "__main__":
     update_pip()
     install_packages(requirements_txt)
 
-    requirements_torch = """
-    torch
-    torchvision
-    """
-    uninstall_packages(['torch', 'torchvision'])
-    install_packages(requirements_torch, index_url=get_cuda_version_from_nvidia_smi())
+    requirements_torch = ['torch', 'torchvision']
+    uninstall_packages(requirements_torch)
+    install_packages("\n".join(requirements_torch), index_url=get_cuda_version_from_nvidia_smi())
