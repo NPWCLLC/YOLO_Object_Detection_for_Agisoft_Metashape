@@ -26,10 +26,11 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
   - pathlib==1.0.1
   - Rtree==1.3.0
   - tqdm==4.67.1
-  - ultralytics==8.3.84
+  - ultralytics
   - torch
   - torchvision
   - scikit-learn==1.6.1
+  - albumentations==2.0.5
 
 ## 🚀 Installation
 
@@ -37,69 +38,54 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
 
 📥[Download](https://github.com/NPWCLLC/YOLO_Object_Detection_for_Agisoft_Metashape/archive/refs/heads/main.zip) the module from this repository and follow these steps:
 
-Open a terminal window and to a directory Agisoft Python environment.
-> Press Win + R, type cmd, and press Enter.
+> Let's say %programfiles% - this is the location of the Agisoft Metashape installation
 
-> %programfiles% - this is the location of the Agisoft Metashape installation
-
-1. Update pip in the Agisoft Python environment:
-   - go to the directory Agisoft Metashape
-   ```
-   cd /d %programfiles%\Agisoft\python
-   ```
-   - run update pip
-   ```
-   python.exe -m pip install --upgrade pip
-   ```
-
-2. Copy the module to the Agisoft modules directory:
+1. Copy the module to the Agisoft modules directory:
    - Copy the files project to folder `%programfiles%\Agisoft\modules\yolo11_detected`
    ```
    %programfiles%\Agisoft\modules\yolo11_detected/
     ├── __init__.py
+    ├── auto_install_packages.py
     ├── create_yolo_dataset.py
     └── detect_yolo.py
    ```
-   - Create a file `run_scripts.py` in the directory `C:/Users /<username>/AppData/Local/Agisoft/Metashape Pro/scripts/`.
+2. Install the required packages:
+
+    #### **Automatic installation of required packages**
+    Start Metashape and run python script `auto_install_packages.py`
+    - Open Metashape and go to `Tools > Run Script`
+    - Select the file `auto_install_packages.py` in the directory `%programfiles%\Agisoft\modules\yolo11_detected`
+    - Click `Run`
+    - Wait for the automatic installation of required packages..
+    You see the message `Packages installed successfully`:
+
+    #### **Manual installation of required packages**
+    See [How to install external Python module to Metashape Professional package](https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package)
+    And install the following packages:
+
+    - numpy==2.0.2 
+    - pandas==2.2.3 
+    - opencv-python==4.11.0.86 
+    - shapely==2.0.7 
+    - pathlib==1.0.1 
+    - Rtree==1.3.0 
+    - tqdm==4.67.1 
+    - ultralytics 
+    - torch
+    - torchvision
+    - scikit-learn==1.6.1 
+    - albumentations==2.0.5 
+
+3. Create a file `run_scripts.py` in the directory `C:/Users /<username>/AppData/Local/Agisoft/Metashape Pro/scripts/`.
+   - Open file `run_scripts.py` in the text editor and add the following line, save and close the file:
    
-   How to install external Python module to Metashape Professional package https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package
-   
-   Open file `run_scripts.py` in the text editor and add the following line, save and close the file:
    ```python
    from modules import yolo11_detected
    ```
+   [How to run Python script automatically on Metashape Professional start.](https://agisoft.freshdesk.com/support/solutions/articles/31000133123-how-to-run-python-script-automatically-on-metashape-professional-start)
 
-3. Restart Metashape and wait for the automatic installation of required packages.
 
-4. Install CUDA-enabled PyTorch (for GPU acceleration):
-
-   Check in a terminal window your cuda version `nvidia-smi`. 
-   See your cuda version for torch and torchvision at https://pytorch.org/get-started/previous-versions/ for python 3.9
-   ```
-   cd /d %programfiles%\Agisoft\python
-   python.exe -m pip uninstall -y torch torchvision
-   python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/<your cuda version>
-   ```
-   `exemple for cuda 11.8 (python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118)`
-
-5. Restart Metashape.
-
-   If everything is fine, you will see in the logs terminal Agisoft Metashape (exemple for cu118):
-   - ✅ numpy 2.0.2 installed
-   - ✅ pandas 2.2.3 installed
-   - ✅ opencv-python 4.11.0.86 installed
-   - ✅ shapely 2.0.7 installed
-   - ✅ pathlib 1.0.1 installed
-   - ✅ Rtree 1.3.0 installed
-   - ✅ tqdm 4.67.1 installed
-   - ✅ ultralytics 8.3.84 installed
-   - ✅ torch 2.7.1+cu118 installed
-   - ✅ torchvision 0.22.1+cu118 installed
-   - ✅ scikit-learn 1.6.1 installed
-   - ✅ albumentations 2.0.5 installed
-
-## Usage
-
+## Usage 
 After installation, two new menu items will be available in Metashape under the "Scripts > YOLO Tools" menu:
 
 ### 1. YOLO Object Detection
@@ -120,7 +106,7 @@ This tool allows you to detect objects on orthomosaic images using YOLO models (
     - Area 2D (m²)
     - Centroid (x,y)
     - Width (m)
-    - Length (m)
+   - Length (m)
 
 **Requirements:**
 - An active orthomosaic with resolution ≤ 10 cm/pixel
