@@ -61,7 +61,11 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
 
     #### **Manual installation of required packages**
     See [How to install external Python module to Metashape Professional package](https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package)
-    And install the following packages:
+    
+    Install CUDA-enabled PyTorch (for GPU acceleration):
+    - Check in a terminal window your cuda version nvidia-smi. See your cuda version for torch and torchvision at https://pytorch.org/get-started/previous-versions/ for python 3.9
+    
+   And install the following packages:
 
     - numpy==2.0.2 
     - pandas==2.2.3 
