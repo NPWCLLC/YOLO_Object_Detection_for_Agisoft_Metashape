@@ -189,11 +189,44 @@ def uninstall_packages(pakages):
 
 if __name__ == "__main__":
     try:
-        update_pip()
-        install_packages(requirements_txt)
+        # update_pip()
+        # install_packages(requirements_txt)
+        #
+        # requirements_torch = ['torch', 'torchvision']
+        # uninstall_packages(requirements_torch)
+        # install_packages("\n".join(requirements_torch), index_url=get_cuda_version_from_nvidia_smi())
 
-        requirements_torch = ['torch', 'torchvision']
-        uninstall_packages(requirements_torch)
-        install_packages("\n".join(requirements_torch), index_url=get_cuda_version_from_nvidia_smi())
+        is_only_check = False
+        if len(sys.argv) > 1:
+            for arg in sys.argv[1:]:
+                if arg in ["--check", "check", "-c", "test"]:
+                    is_only_check = True
+
+        requirements_check = """
+                    numpy
+                    pandas
+                    opencv-python
+                    shapely
+                    pathlib
+                    Rtree
+                    tqdm
+                    ultralytics
+                    torch
+                    torchvision
+                    scikit-learn
+                    albumentations
+                    """
+
+        if is_only_check:
+            check_package_installed(requirements_check)
+        else:
+            update_pip()
+
+            install_packages(requirements_txt)
+
+            requirements_torch = ['torch', 'torchvision']
+            uninstall_packages(requirements_torch)
+
+            install_packages("\n".join(requirements_torch), index_url=get_cuda_version_from_nvidia_smi())
     except Exception as ex:
         print(ex)
