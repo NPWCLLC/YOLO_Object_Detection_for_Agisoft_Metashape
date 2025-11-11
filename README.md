@@ -79,6 +79,10 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
     - torchvision
     - scikit-learn==1.6.1 
     - albumentations==2.0.5 
+   
+    > Install Packages: python.exe -m pip install <packages_names>
+
+    > You can always delete previously installed packages: python.exe -m pip uninstall -y <packages_names>
 
 3. Create a file `run_scripts.py` in the directory `C:/Users /<username>/AppData/Local/Agisoft/Metashape Pro/scripts/`.
    - Open file `run_scripts.py` in the text editor and add the following line, save and close the file:
