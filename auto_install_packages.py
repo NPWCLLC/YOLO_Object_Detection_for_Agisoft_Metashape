@@ -149,9 +149,12 @@ def uninstall_packages(pakages):
         print(f"✅ All {pakages} packages uninstalled!")
 
 if __name__ == "__main__":
-    update_pip()
-    install_packages(requirements_txt)
+    try:
+        update_pip()
+        install_packages(requirements_txt)
 
-    requirements_torch = ['torch', 'torchvision']
-    uninstall_packages(requirements_torch)
-    install_packages("\n".join(requirements_torch), index_url=get_cuda_version_from_nvidia_smi())
+        requirements_torch = ['torch', 'torchvision']
+        uninstall_packages(requirements_torch)
+        install_packages("\n".join(requirements_torch), index_url=get_cuda_version_from_nvidia_smi())
+    except Exception as ex:
+        print(ex)
