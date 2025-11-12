@@ -16,7 +16,7 @@ import math
 import torch
 import pandas as pd
 from ultralytics import YOLO
-
+from typing import List, Tuple, Union, Optional
 
 DEVICES = []
 
@@ -35,6 +35,116 @@ elif torch.cuda.is_available():
 else:
     device = "cpu"
     print("\n⚠️ Using CPU — no hardware acceleration")
+
+
+def get_utm_epsg_from_point(lon: float, lat: float) -> Optional[str]:
+    if abs(lon) > 180 or abs(lat) > 90:
+        return None
+
+    zone = int((lon + 180) // 6) + 1
+    base = 32600 if lat >= 0 else 32700
+    return f"EPSG::{base + zone}"
+
+
+def normalize_points(points_data):
+    """
+    Convert the input data to the numpy(N, 2) array.
+
+    Supported formats:
+      - [(x, y), (x, y), ...] → list of tuples/lists
+      - [[x, y], [x, y], ...] → list of lists
+      - [x1, y1, x2, y2, ...] → flat list
+
+    Returns:
+        np.ndarray of the form (N, 2), dtype=float64
+    """
+    if points_data is None:
+        return np.empty((0, 2), dtype=np.float64)
+
+
+    if isinstance(points_data, np.ndarray):
+        if points_data.size == 0:
+            return np.empty((0, 2), dtype=np.float64)
+    else:
+
+        try:
+            if len(points_data) == 0:
+                return np.empty((0, 2), dtype=np.float64)
+        except TypeError:
+            raise ValueError(f"Unsupported input data type: {type(points_data)}")
+
+    first = points_data[0]
+
+    if isinstance(first, (int, float, np.number)):
+        n = len(points_data)
+        if n % 2 != 0:
+            raise ValueError(f"An odd number of coordinates ({n}) is a data error.")
+
+        arr = np.asarray(points_data, dtype=np.float64)
+        return arr.reshape(-1, 2)
+
+    if hasattr(first, '__len__') and len(first) == 2:
+        try:
+            return np.array(points_data, dtype=np.float64)
+        except Exception as e:
+            raise ValueError(f"Couldn't convert to array (N, 2): {e}")
+
+
+    raise ValueError(
+        f"Unknown coordinate format. The first element is {first} (type {type(first)}). "
+        "Expected: [(x, y), ...], [[x, y], ...] or [x, y, x, y, ...]"
+    )
+
+
+def convert_to_utm(input_data, source_crs, target_crs):
+    points = normalize_points(input_data)
+    if not points.any():
+        return []
+
+    lon0, lat0 = points[0]
+    if abs(lon0) > 180 or abs(lat0) > 90:
+        return [Metashape.Vector([x, y]) for x, y in points]
+
+    vectors_list = [
+        Metashape.CoordinateSystem.transform(
+            Metashape.Vector([x, y]),
+            source_crs,
+            target_crs
+        )
+        for x, y in points
+    ]
+    return vectors_list
+
+
+def vectors_to_bbox(vectors_data):
+    """
+    Converts the Metashape list.Vector in the bounding box [x_min, y_min, x_max, y_max].
+
+    Args:
+        vectors_data: list or array Vector or (x, y)
+
+    Returns:
+        [x_min, y_min, x_max, y_max] - list of float
+    """
+    if not vectors_data:
+        raise ValueError("The list of vectors is empty")
+
+    xs = []
+    ys = []
+    for v in vectors_data:
+        if hasattr(v, 'x') and hasattr(v, 'y'):  # Metashape.Vector
+            xs.append(v.x)
+            ys.append(v.y)
+        elif isinstance(v, (list, tuple)) and len(v) >= 2:  # (x, y)
+            xs.append(v[0])
+            ys.append(v[1])
+        else:
+            raise TypeError(f"Unsupported point type: {type(v)}")
+
+    x_min, x_max = min(xs), max(xs)
+    y_min, y_max = min(ys), max(ys)
+
+    return [x_min, y_min, x_max, y_max]
 
 
 def pandas_append(df, row, ignore_index=False):
@@ -74,6 +184,7 @@ def pandas_append(df, row, ignore_index=False):
         raise RuntimeError("pandas_append: unsupported row type - {}".format(type(row)))
 
     return result
+
 
 def getShapeVertices(shape):
     """
@@ -123,6 +234,7 @@ def getShapeVertices(shape):
 
     return result
 
+
 def ensure_unique_directory(base_dir):
     """
     Generates a unique directory name by appending a numeric suffix to the provided base directory
@@ -147,6 +259,7 @@ def ensure_unique_directory(base_dir):
 
     return new_dir
 
+
 def remove_directory(directory_path):
     """
     Removes the specified directory and its contents if it exists. If the directory
@@ -168,16 +281,16 @@ def remove_directory(directory_path):
 def merge_contours_shapely(contours, iou_threshold=0.7):
     """
     Merges contours based on Intersection over Union (IoU) threshold using Shapely library.
-    
+
     This function converts contours to polygons and iteratively merges them if their IoU
     (relative to the minimum area) exceeds the specified threshold. It handles invalid
     geometries and tracks original contour indices for each merged result.
-    
+
     Parameters:
         contours (list): List of contours to merge. Each contour is a list of coordinate points.
         iou_threshold (float): IoU threshold for merging (default: 0.7). Polygons with
             intersection_area / min_area >= iou_threshold will be merged.
-    
+
     Returns:
         tuple: A tuple containing:
             - result_contours (list): List of merged contours as numpy arrays
@@ -294,14 +407,15 @@ def merge_contours_shapely(contours, iou_threshold=0.7):
 
     return result_contours, result_indices
 
+
 def calculate_iou(box1, box2):
     """
     Calculate IoU (Intersection over Union) for two boxes: box1 and box2.
-    
+
     Parameters:
         box1 (list): Coordinates of the first box [x1, y1, x2, y2].
         box2 (list): Coordinates of the second box [x1, y1, x2, y2].
-    
+
     Returns:
         float: IoU value between 0 and 1.
     """
@@ -324,15 +438,16 @@ def calculate_iou(box1, box2):
     iou = intersection_area / union_area if union_area != 0 else 0
     return iou
 
+
 def is_inside(box1, box2, threshold=0.9):
     """
     Checks if box1 is inside box2 with a given overlap percentage.
-    
+
     Parameters:
         box1 (list): Coordinates of the first box [x1, y1, x2, y2].
         box2 (list): Coordinates of the second box [x1, y1, x2, y2].
         threshold (float): Overlap threshold (from 0 to 1), 1.0 for complete intersection, 0.9 for 90%.
-    
+
     Returns:
         bool: True if box1 is inside box2 by 'threshold', otherwise False.
     """
@@ -351,14 +466,15 @@ def is_inside(box1, box2, threshold=0.9):
     # Check overlap condition
     return (intersect_area / box1_area) >= threshold
 
+
 def merge_boxes(box1, box2):
     """
     Merges two boxes into one that encompasses both.
-    
+
     Parameters:
         box1 (list): Coordinates of the first box [x1, y1, x2, y2].
         box2 (list): Coordinates of the second box [x1, y1, x2, y2].
-    
+
     Returns:
         list: Coordinates of the merged box [x1, y1, x2, y2].
     """
@@ -368,14 +484,15 @@ def merge_boxes(box1, box2):
     y2 = max(box1[3], box2[3])
     return [x1, y1, x2, y2]
 
+
 def merge_all_boxes(boxes, iou_threshold=0.9):
     """
     Merges all intersecting or fully nested boxes until no more merging is possible.
-    
+
     Parameters:
         boxes (list): List of boxes to merge, each box is [x1, y1, x2, y2].
         iou_threshold (float): IoU threshold for merging (default: 0.9).
-    
+
     Returns:
         tuple: A tuple containing:
             - merged_boxes (list): List of merged boxes
@@ -431,13 +548,14 @@ def merge_all_boxes(boxes, iou_threshold=0.9):
 
     return merged_boxes, box_indices
 
+
 def group_shapes_by_label(input_data) -> dict:
     """
     Groups shape data by their labels.
-    
+
     Parameters:
         input_data (list): List of dictionaries, each containing shape data with a 'label' key.
-    
+
     Returns:
         dict: Dictionary where keys are labels and values are lists of shape data
               belonging to that label.
@@ -451,17 +569,18 @@ def group_shapes_by_label(input_data) -> dict:
 
     return groups
 
+
 def extract_coords_metadata_shapes(input_shapes) -> list:
     """
     Extracts coordinates and metadata from shape objects or processes existing dictionaries.
-    
+
     This function handles two types of input:
     1. Shape objects with geometry attributes - extracts coordinates, label, and score
     2. Dictionaries already containing coordinates, label, and score - returns as is
-    
+
     Parameters:
         input_shapes (list): List of shape objects or dictionaries containing shape data.
-    
+
     Returns:
         list: List of dictionaries, each containing:
               - 'coords': List of coordinate points
@@ -492,20 +611,19 @@ def extract_coords_metadata_shapes(input_shapes) -> list:
     return shapes_data
 
 
-
 class MainWindowDetect(QtWidgets.QDialog):
 
     def __init__(self, parent):
         """
         Initializes the YOLO object detection dialog window.
-        
+
         Sets up the detection parameters, loads settings from the application configuration,
         initializes the GUI, and prepares the working environment for object detection on
         orthomosaic images.
-        
+
         Parameters:
             parent: Parent widget for this dialog.
-        
+
         Instance Variables:
             stopped (bool): Flag to control process interruption.
             model: YOLO model instance (initialized later).
@@ -521,6 +639,8 @@ class MainWindowDetect(QtWidgets.QDialog):
             preferred_resolution (float): Preferred resolution in meters/pixel (default: 0.005 m/pix).
         """
         QtWidgets.QDialog.__init__(self, parent)
+
+        self.TARGET_UTM_CRS = None
 
         self.stopped = False
         self.model = None
@@ -543,19 +663,20 @@ class MainWindowDetect(QtWidgets.QDialog):
         self.detect_on_user_layer_enabled = False
         self.preferred_patch_size = 640  # 640 pixels
         self.preferred_resolution = 0.005  # 0.5 cm/pix
-        
+
         # Load detection_score_threshold from settings
         score_threshold = Metashape.app.settings.value("scripts/yolo/score-threshold")
         self.detection_score_threshold = float(score_threshold) if score_threshold else 0.90
-        
+
         # Load iou_threshold from settings
         iou_threshold = Metashape.app.settings.value("scripts/yolo/iou-threshold")
         self.iou_threshold = float(iou_threshold) if iou_threshold else 0.6
-        
+
         self.prefer_original_resolution = False
 
         self.setWindowTitle("YOLO objects detection on orthomosaic")
         self.chunk = Metashape.app.document.chunk
+
         self.create_gui()
         self.exec()
 
@@ -625,26 +746,26 @@ class MainWindowDetect(QtWidgets.QDialog):
         msg_box.setWindowTitle(title)
         msg_box.setText(text)
         msg_box.setInformativeText(informative_text)
-        
+
         # Add all buttons and store references
         button_widgets = []
         for button_text, button_role in buttons:
             btn = msg_box.addButton(button_text, button_role)
             button_widgets.append(btn)
-        
+
         # Set default button
         if 0 <= default_button_index < len(button_widgets):
             msg_box.setDefaultButton(button_widgets[default_button_index])
-        
+
         # Execute dialog
         msg_box.exec_()
-        
+
         # Find which button was clicked and return its index
         clicked_button = msg_box.clickedButton()
         for i_bw, btn in enumerate(button_widgets):
             if btn == clicked_button:
                 return i_bw
-        
+
         # Should not reach here, but return 0 as fallback
         return 0
 
@@ -677,10 +798,15 @@ class MainWindowDetect(QtWidgets.QDialog):
                 self.chunk.shapes = Metashape.Shapes()
                 self.chunk.shapes.crs = self.chunk.crs
 
+            print(f"Source CRS: {self.chunk.orthomosaic.crs}")
+            target_crs = get_utm_epsg_from_point(self.chunk.orthomosaic.left, self.chunk.orthomosaic.top)
+            if target_crs:
+                self.TARGET_UTM_CRS = Metashape.CoordinateSystem(target_crs)
+
             # Determine whether to use zones or entire orthomosaic
             detectZonesLayer = self.layers[self.detectZonesLayer.currentIndex()]
             use_zones = (detectZonesLayer != self.noDataChoice)
-            
+
             # Call unified detection method
             self.detect_unified(use_zones=use_zones)
 
@@ -748,7 +874,6 @@ class MainWindowDetect(QtWidgets.QDialog):
         """
         print("Neural network loading...")
 
-
         if self.load_model_path:
             print("Using the neural network loaded from '{}'...".format(self.load_model_path))
             Metashape.app.settings.setValue("scripts/yolo/model_load_path", self.load_model_path)
@@ -796,7 +921,7 @@ class MainWindowDetect(QtWidgets.QDialog):
                 buttons=buttons,
                 default_button_index=0
             )
-            
+
             if choice == 1:  # "Delete and Create New" was clicked
                 # Delete existing tiles
                 print("Deleting existing tiles...")
@@ -806,7 +931,7 @@ class MainWindowDetect(QtWidgets.QDialog):
                         os.remove(tile_path)
                     except Exception as e:
                         print(f"Error deleting tile {tile}: {e}")
-                
+
                 # Create new tiles
                 self.chunk.exportRaster(path=self.dir_tiles + "tile.jpg",
                                         source_data=Metashape.OrthomosaicData,
@@ -956,8 +1081,8 @@ class MainWindowDetect(QtWidgets.QDialog):
 
                 res[res_inner_from[1]:res_inner_to[1], res_inner_from[0]:res_inner_to[0], :] = part[part_inner_from[1]:
                                                                                                     part_inner_to[1],
-                                                                                               part_inner_from[0]:
-                                                                                               part_inner_to[0], :]
+                part_inner_from[0]:
+                part_inner_to[0], :]
 
         return res
 
@@ -1009,7 +1134,6 @@ class MainWindowDetect(QtWidgets.QDialog):
                 constraints after inversion.
         """
 
-
         to_world33 = np.vstack([to_world, [0, 0, 1]])
         from_world = np.linalg.inv(to_world33)
 
@@ -1038,7 +1162,7 @@ class MainWindowDetect(QtWidgets.QDialog):
     def _get_debug_save_flags(self):
         """
         Returns save flags for debug mode.
-        
+
         Returns:
             tuple: (save, save_conf, save_txt, save_crop)
         """
@@ -1049,77 +1173,77 @@ class MainWindowDetect(QtWidgets.QDialog):
     def _run_prediction(self, subtile):
         """
         Executes YOLO prediction on a subtile.
-        
+
         Parameters:
             subtile: Image tile for prediction
-            
+
         Returns:
             Prediction result from the model
         """
         save, save_conf, save_txt, save_crop = self._get_debug_save_flags()
-        
+
         with torch.no_grad():
             prediction = self.model.predict(
-                subtile, 
+                subtile,
                 imgsz=640,
                 device=DEVICES if device == "cuda" else device,
-                conf=self.detection_score_threshold, 
+                conf=self.detection_score_threshold,
                 iou=0.45,
-                project=self.dir_subtiles_results, 
-                save=save, 
+                project=self.dir_subtiles_results,
+                save=save,
                 save_conf=save_conf,
-                save_txt=save_txt, 
-                save_crop=save_crop, 
+                save_txt=save_txt,
+                save_crop=save_crop,
                 half=True
             )
-        
+
         return prediction[0].cpu()
 
     def _process_mask_contour(self, mask, orig_h, orig_w, x_offset, y_offset):
         """
         Processes mask data and extracts the largest contour with coordinate offset.
-        
+
         Parameters:
             mask: Normalized mask coordinates
             orig_h: Original image height
             orig_w: Original image width
             x_offset: X coordinate offset to apply
             y_offset: Y coordinate offset to apply
-            
+
         Returns:
             list: Shifted contour points or empty list if no valid contour
         """
         # Convert normalized coordinates to pixels
         pixel_coords = np.array([[int(y * orig_h), int(x * orig_w)] for y, x in mask], dtype=np.int32)
-        
+
         # Create binary mask
         binary_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
         cv2.fillPoly(binary_mask, [pixel_coords], color=255)
-        
+
         # Get contours
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
+
         if contours:
             # Find contour with largest area
             areas = [cv2.contourArea(contour) for contour in contours]
             largest_contour_index = np.argmax(areas)
             largest_contour = contours[largest_contour_index]
-            
+
             # Shift contour point coordinates
             shifted_contour = [[x + x_offset, y + y_offset] for [[x, y]] in largest_contour]
             return shifted_contour
-        
+
         return []
 
     def _compute_box_coordinates(self, data, to_world_key='zone_to_world', use_offset=True):
         """
         Computes box coordinates from prediction data without creating shapes.
-        
+
         Parameters:
             data: DataFrame with prediction data
             to_world_key: Key/attribute name for transformation matrix
             use_offset: Whether to use 0.5 pixel offset (False for zones, True for tiles)
-            
+
         Returns:
             list: List of dictionaries containing:
                 - 'coords': coordinate lists (corners) for each box
@@ -1130,13 +1254,13 @@ class MainWindowDetect(QtWidgets.QDialog):
         for row in data.itertuples():
             xmin, ymin, xmax, ymax = int(row.xmin), int(row.ymin), int(row.xmax), int(row.ymax)
             label, score = row.label, row.score
-            
+
             # Get transformation matrix
             if to_world_key == 'zone_to_world':
                 to_world = row.zone_to_world
             else:
                 to_world = getattr(row, to_world_key, None)
-                
+
             corners = []
             for x, y in [(xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)]:
                 if use_offset:
@@ -1146,25 +1270,25 @@ class MainWindowDetect(QtWidgets.QDialog):
                 p = Metashape.Vector([transformed[0, 0], transformed[1, 0]])
                 p = Metashape.CoordinateSystem.transform(p, self.chunk.orthomosaic.crs, self.chunk.shapes.crs)
                 corners.append([p.x, p.y])
-            
+
             result.append({
                 'coords': corners,
                 'label': label,
                 'score': score
             })
-            
+
         return result
 
     def _add_box_shapes_to_layer(self, data, shapes_group, to_world_key='zone_to_world', use_offset=True):
         """
         Unified method to add box shapes from prediction data.
-        
+
         Parameters:
             data: DataFrame with prediction data
             shapes_group: Group to add shapes to
             to_world_key: Key/attribute name for transformation matrix
             use_offset: Whether to use 0.5 pixel offset (False for zones, True for tiles)
-            
+
         Returns:
             list: Created shape objects
         """
@@ -1172,13 +1296,13 @@ class MainWindowDetect(QtWidgets.QDialog):
         for row in data.itertuples():
             xmin, ymin, xmax, ymax = int(row.xmin), int(row.ymin), int(row.xmax), int(row.ymax)
             label, score = row.label, row.score
-            
+
             # Get transformation matrix
             if to_world_key == 'zone_to_world':
                 to_world = row.zone_to_world
             else:
                 to_world = getattr(row, to_world_key, None)
-                
+
             corners = []
             for x, y in [(xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)]:
                 if use_offset:
@@ -1188,29 +1312,29 @@ class MainWindowDetect(QtWidgets.QDialog):
                 p = Metashape.Vector([transformed[0, 0], transformed[1, 0]])
                 p = Metashape.CoordinateSystem.transform(p, self.chunk.orthomosaic.crs, self.chunk.shapes.crs)
                 corners.append([p.x, p.y])
-            
+
             shape = self.chunk.shapes.addShape()
             shape.group = shapes_group
             shape.geometry = Metashape.Geometry.Polygon(corners)
             shape.label = self.classes[int(label)]
             shape.attributes["Score"] = str(score)
             shapes.append({
-                    'coords': corners,
-                    'label': label,
-                    'score': score
-                })
-            
+                'coords': corners,
+                'label': label,
+                'score': score
+            })
+
         return shapes
 
     def _compute_mask_coordinates(self, data, to_world_key='zone_to_world', use_offset=True):
         """
         Computes mask coordinates from prediction data without creating shapes.
-        
+
         Parameters:
             data: DataFrame with prediction data containing mask column
             to_world_key: Key/attribute name for transformation matrix
             use_offset: Whether to use 0.5 pixel offset
-            
+
         Returns:
             list: List of dictionaries containing:
                 - 'coords': coordinate lists (corners) for each mask polygon
@@ -1221,13 +1345,13 @@ class MainWindowDetect(QtWidgets.QDialog):
         for row in data.itertuples():
             mask = row.mask
             label, score = row.label, row.score
-            
+
             # Get transformation matrix
             if to_world_key == 'zone_to_world':
                 to_world = row.zone_to_world
             else:
                 to_world = getattr(row, to_world_key, None)
-            
+
             corners = []
             for coord in mask:
                 x, y = coord
@@ -1238,7 +1362,7 @@ class MainWindowDetect(QtWidgets.QDialog):
                 p = Metashape.Vector([transformed[0, 0], transformed[1, 0]])
                 p = Metashape.CoordinateSystem.transform(p, self.chunk.orthomosaic.crs, self.chunk.shapes.crs)
                 corners.append([p.x, p.y])
-            
+
             if len(corners) >= 3:
                 result.append({
                     'coords': corners,
@@ -1247,19 +1371,19 @@ class MainWindowDetect(QtWidgets.QDialog):
                 })
             else:
                 print(f"Invalid polygon with less than 3 coordinates: {corners}")
-                
+
         return result
 
     def _add_mask_shapes_to_layer(self, data, shapes_group, to_world_key='zone_to_world', use_offset=True):
         """
         Unified method to add mask shapes from prediction data.
-        
+
         Parameters:
             data: DataFrame with prediction data containing mask column
             shapes_group: Group to add shapes to
             to_world_key: Key/attribute name for transformation matrix
             use_offset: Whether to use 0.5 pixel offset
-            
+
         Returns:
             list: Created shape objects
         """
@@ -1267,13 +1391,13 @@ class MainWindowDetect(QtWidgets.QDialog):
         for row in data.itertuples():
             mask = row.mask
             label, score = row.label, row.score
-            
+
             # Get transformation matrix
             if to_world_key == 'zone_to_world':
                 to_world = row.zone_to_world
             else:
                 to_world = getattr(row, to_world_key, None)
-            
+
             corners = []
             for coord in mask:
                 x, y = coord
@@ -1284,7 +1408,7 @@ class MainWindowDetect(QtWidgets.QDialog):
                 p = Metashape.Vector([transformed[0, 0], transformed[1, 0]])
                 p = Metashape.CoordinateSystem.transform(p, self.chunk.orthomosaic.crs, self.chunk.shapes.crs)
                 corners.append([p.x, p.y])
-            
+
             if len(corners) >= 3:
                 shape = self.chunk.shapes.addShape()
                 shape.group = shapes_group
@@ -1298,13 +1422,13 @@ class MainWindowDetect(QtWidgets.QDialog):
                 })
             else:
                 print(f"Invalid polygon with less than 3 coordinates: {corners}")
-                
+
         return shapes
 
     def _merge_and_apply_shapes(self, box_shapes, mask_shapes):
         """
         Merges overlapping shapes and applies them to the chunk.
-        
+
         Parameters:
             box_shapes: List of box shape objects OR list of coordinate lists
             mask_shapes: List of mask shape objects OR list of coordinate lists
@@ -1312,7 +1436,7 @@ class MainWindowDetect(QtWidgets.QDialog):
         print(f"Processing overlapping contours...")
 
         start_time = time.time()
-        
+
         # Handle both shape objects and coordinate lists
         # If first element is a shape object, extract coordinates and metadata
         box_data = extract_coords_metadata_shapes(box_shapes)
@@ -1321,16 +1445,16 @@ class MainWindowDetect(QtWidgets.QDialog):
         # Group shapes by label
         box_groups = group_shapes_by_label(box_data)
         mask_groups = group_shapes_by_label(mask_data)
-        
+
         # Process each label group separately
         merged_mask_results = []
         for label, masks in mask_groups.items():
             coords_list = [mask['coords'] for mask in masks]
             scores = [mask['score'] for mask in masks]
-            
-            
-            merged_shapes, merged_indices = merge_contours_shapely(coords_list, iou_threshold=self.iouThresholdSpinBox.value())
-            
+
+            merged_shapes, merged_indices = merge_contours_shapely(coords_list,
+                                                                   iou_threshold=self.iouThresholdSpinBox.value())
+
             # Calculate average score for each merged shape based on its contributing inputs
             for merged_shape, contributing_indices in zip(merged_shapes, merged_indices):
                 # Get scores of all shapes that were merged into this one
@@ -1338,7 +1462,13 @@ class MainWindowDetect(QtWidgets.QDialog):
                 avg_score = sum(contributing_scores) / len(contributing_scores) if contributing_scores else 0.0
 
                 try:
-                    poly = Polygon(merged_shape)
+                    if self.TARGET_UTM_CRS:
+                        shape_coords = convert_to_utm(merged_shape, source_crs=self.chunk.orthomosaic.crs,
+                                                      target_crs=self.TARGET_UTM_CRS)
+                    else:
+                        shape_coords = merged_shape
+
+                    poly = Polygon(shape_coords)
                     shape_area = poly.area
                     shape_centroid = (poly.centroid.x, poly.centroid.y)
 
@@ -1348,9 +1478,11 @@ class MainWindowDetect(QtWidgets.QDialog):
                     if min_rect.is_empty:
                         shape_width = 0.0
                         shape_length = 0.0
+
                     else:
                         # min_rect is a Polygon with 5 points (closed rectangle)
                         coords = list(min_rect.exterior.coords)
+
                         # Take first three points: A, B, C
                         # AB and BC are adjacent sides
 
@@ -1364,13 +1496,14 @@ class MainWindowDetect(QtWidgets.QDialog):
                         shape_length = max(side1, side2)
                         shape_width = min(side1, side2)
 
+
                 except Exception as e:
                     print(f"Error calculating area or dimensions for merged shape: {e}")
                     shape_area = 0.0
                     shape_centroid = None
                     shape_width = 0.0
                     shape_length = 0.0
-                
+
                 merged_mask_results.append({
                     'shape': merged_shape,
                     'label': label,
@@ -1380,14 +1513,14 @@ class MainWindowDetect(QtWidgets.QDialog):
                     'width': shape_width,
                     'length': shape_length
                 })
-        
+
         # Process boxes
         merged_box_results = []
         for label, boxes in box_groups.items():
             # Extract coordinates in xyxy format
             coords_boxes_xyxy = []
             scores = []
-            
+
             for box in boxes:
                 coords = box['coords']
                 scores.append(box['score'])
@@ -1395,19 +1528,27 @@ class MainWindowDetect(QtWidgets.QDialog):
                     min(point[0] for point in coords),  # x_min
                     min(point[1] for point in coords),  # y_min
                     max(point[0] for point in coords),  # x_max
-                    max(point[1] for point in coords)   # y_max
+                    max(point[1] for point in coords)  # y_max
                 ])
-            
-            merged_boxes, merged_indices = merge_all_boxes(coords_boxes_xyxy, iou_threshold=self.iouThresholdSpinBox.value())
-            
+
+            merged_boxes, merged_indices = merge_all_boxes(coords_boxes_xyxy,
+                                                           iou_threshold=self.iouThresholdSpinBox.value())
+
             # Calculate average score for each merged box based on its contributing inputs
             for merged_box, contributing_indices in zip(merged_boxes, merged_indices):
                 # Get scores of all boxes that were merged into this one
                 contributing_scores = [scores[idx] for idx in contributing_indices]
                 avg_score = sum(contributing_scores) / len(contributing_scores) if contributing_scores else 0.0
-                
+
+                if self.TARGET_UTM_CRS:
+                    shape_coords = convert_to_utm(merged_box, source_crs=self.chunk.orthomosaic.crs,
+                                                  target_crs=self.TARGET_UTM_CRS)
+                    norm_bbox = vectors_to_bbox(shape_coords)
+                else:
+                    norm_bbox = merged_box
+
                 # Calculate area of the merged box (format: [x_min, y_min, x_max, y_max])
-                x_min, y_min, x_max, y_max = merged_box
+                x_min, y_min, x_max, y_max = norm_bbox
                 width = min(x_max - x_min, y_max - y_min)
                 length = max(x_max - x_min, y_max - y_min)
                 centroid = [(x_min + x_max) / 2, (y_min + y_max) / 2]
@@ -1424,21 +1565,20 @@ class MainWindowDetect(QtWidgets.QDialog):
                     'length': length
                 })
 
-        
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Processing {len(mask_data)} contours, result {len(merged_mask_results)} contours, "
               f"duration {elapsed_time / 60:.2f} minutes")
-        
+
         # Apply merged shapes
         if merged_mask_results:
             union_outline_label = f"union_outline_detected ({100.0 * self.orthomosaic_resolution:.2f} cm/pix, " \
-                                 f"size img: {self.max_image_size}, confidence: {self.detection_score_threshold})"
+                                  f"size img: {self.max_image_size}, confidence: {self.detection_score_threshold})"
             self.apply_union_mask_shapes(self.chunk, merged_mask_results, union_outline_label)
-        
+
         if merged_box_results:
             union_boxes_label = f"union_boxes_detected ({100.0 * self.orthomosaic_resolution:.2f} cm/pix, " \
-                               f"size img: {self.max_image_size}, confidence: {self.detection_score_threshold})"
+                                f"size img: {self.max_image_size}, confidence: {self.detection_score_threshold})"
             self.apply_union_boxes_shapes(self.chunk, merged_box_results, union_boxes_label)
 
     def draw_boxes_zone_tiles(self, tiles_data, use_zones=False):
@@ -1487,7 +1627,7 @@ class MainWindowDetect(QtWidgets.QDialog):
                     tile_local_x = x - xmin
                     tile_local_y = y - ymin
                     transformed = zone_to_world @ np.array([tile_local_x + 0.5, tile_local_y + 0.5, 1]).reshape(3, 1)
-                
+
                 p = Metashape.Vector([transformed[0, 0], transformed[1, 0]])
                 p = Metashape.CoordinateSystem.transform(p, self.chunk.orthomosaic.crs, self.chunk.shapes.crs)
                 corners.append([p.x, p.y])
@@ -1619,17 +1759,16 @@ class MainWindowDetect(QtWidgets.QDialog):
                                                 "x_max": tile_to[0], "y_max": tile_to[1], "label": label_tile,
                                                 "zone_to_world": zone_to_world})
 
-
         print(f"Tiles: {len(all_tiles_zones)}")
         return all_tiles_zones
 
     def get_tiles_from_orthomosaic(self):
         """
         Extracts and processes tiles from the entire orthomosaic with overlap.
-        
+
         Returns tiles in the same format as get_tiles_from_zones() for unified processing.
         Implements tile overlap similar to get_tiles_from_zones() using patch_inner_border.
-        
+
         Returns
         -------
         List[Dict[str, Any]]
@@ -1637,26 +1776,26 @@ class MainWindowDetect(QtWidgets.QDialog):
         """
         app = QtWidgets.QApplication.instance()
         all_tiles = []
-        
+
         # Calculate the orthomosaic dimensions based on tile range
         ortho_from = np.array([self.tile_min_x * self.patch_size, self.tile_min_y * self.patch_size])
         ortho_to = np.array([(self.tile_max_x + 1) * self.patch_size, (self.tile_max_y + 1) * self.patch_size])
         ortho_size = ortho_to - ortho_from
-        
+
         # Use border for overlap, same as in get_tiles_from_zones
         border = self.patch_inner_border
         inner_patch_size = self.patch_size - 2 * border
-        
+
         # Calculate number of tiles with overlap
         # Same logic as in get_tiles_from_zones
         assert np.all(ortho_size >= self.patch_size)
         nx_tiles = int((ortho_size[0] - 2 * border + inner_patch_size - 1) // inner_patch_size)
         ny_tiles = int((ortho_size[1] - 2 * border + inner_patch_size - 1) // inner_patch_size)
         assert nx_tiles >= 1 and ny_tiles >= 1
-        
+
         # Calculate step between tiles to cover the entire orthomosaic
         xy_step = np.int32(np.round((ortho_size + [nx_tiles, ny_tiles] - 1) // [nx_tiles, ny_tiles]))
-        
+
         # Find a reference tile to get the transformation matrix
         reference_to_world = None
         reference_tile_x = None
@@ -1670,14 +1809,14 @@ class MainWindowDetect(QtWidgets.QDialog):
                     break
             if reference_to_world is not None:
                 break
-        
+
         if reference_to_world is None:
             print("No tiles found in orthomosaic!")
             return all_tiles
-        
+
         out_of_orthomosaic_tiles = 0
         total_steps = nx_tiles * ny_tiles
-        
+
         # Generate overlapping tiles
         for x_tile in range(nx_tiles):
             for y_tile in range(ny_tiles):
@@ -1697,27 +1836,27 @@ class MainWindowDetect(QtWidgets.QDialog):
                 if x_tile == 0 and y_tile == 0:
                     assert np.all(tile_from == ortho_from)
                 assert np.all(tile_from >= ortho_from)
-                
+
                 # Read the tile part from orthomosaic
                 tile = self.read_part(tile_from, tile_to)
                 assert tile.shape == (self.patch_size, self.patch_size, 3)
-                
+
                 # Check if tile is mostly white (outside orthomosaic)
                 white_pixels_fraction = np.sum(np.all(tile == 255, axis=-1)) / (
                         tile.shape[0] * tile.shape[1])
                 if np.all(tile == 255) or white_pixels_fraction >= 0.90:
                     out_of_orthomosaic_tiles += 1
                     continue
-                
+
                 # Calculate transformation matrix for this specific tile
                 # Similar to the old detect() method where each tile has its own transformation
                 # tile_from is already in absolute coordinates, so we just need to shift from reference tile
                 tile_to_world = self.add_pixel_shift(reference_to_world,
                                                      tile_from[0] - reference_tile_x * self.patch_size,
                                                      tile_from[1] - reference_tile_y * self.patch_size)
-                
+
                 label_tile = f"ortho_{x_tile}_{y_tile}"
-                
+
                 all_tiles.append({
                     "tile": tile,
                     "x_tile": tile_from[0],
@@ -1727,14 +1866,14 @@ class MainWindowDetect(QtWidgets.QDialog):
                     "label": label_tile,
                     "zone_to_world": tile_to_world
                 })
-        
+
         print(f"Tiles from orthomosaic: {len(all_tiles)} (skipped {out_of_orthomosaic_tiles} white tiles)")
         return all_tiles
 
     def detect_unified(self, use_zones=False):
         """
         Unified detection method that processes either selected zones or entire orthomosaic.
-        
+
         Parameters
         ----------
         use_zones : bool, optional
@@ -1836,27 +1975,27 @@ class MainWindowDetect(QtWidgets.QDialog):
 
                     subtile_inner_preds = pandas_append(subtile_inner_preds, pd.DataFrame([row]),
                                                         ignore_index=True)
-        
+
         # Create shapes for processing (regardless of debug mode)
         boxes_shapes = []
         outline_shapes = []
-        
+
         if self.isDebugMode:
             # In debug mode, create new layers for results
             box_detected_label = f"box_detected ({100.0 * self.orthomosaic_resolution:.2f} cm/pix, " \
-                                f"size img: {self.max_image_size}, confidence: {self.detection_score_threshold})"
-    
+                                 f"size img: {self.max_image_size}, confidence: {self.detection_score_threshold})"
+
             detected_shapes_layer = self.chunk.shapes.addGroup()
             detected_shapes_layer.label = box_detected_label
             detected_shapes_layer.show_labels = False
-    
+
             # Use unified method to add boxes
             boxes_shapes = self._add_box_shapes_to_layer(subtile_inner_preds, detected_shapes_layer,
                                                          to_world_key='zone_to_world', use_offset=True)
-    
+
             if subtile_inner_preds['mask'].notna().any():
                 detected_mask_label = self.layer_name_detection_data + f"outline_detected ({100.0 * self.orthomosaic_resolution:.2f} cm/pix, " \
-                                     f"size img: {self.max_image_size}, confidence: {self.detection_score_threshold})"
+                                                                       f"size img: {self.max_image_size}, confidence: {self.detection_score_threshold})"
                 detected_mask_shapes_layer = self.chunk.shapes.addGroup()
                 detected_mask_shapes_layer.label = detected_mask_label
                 detected_mask_shapes_layer.show_labels = False
@@ -1865,12 +2004,12 @@ class MainWindowDetect(QtWidgets.QDialog):
                                                                 to_world_key='zone_to_world', use_offset=True)
         else:
             # In normal mode, compute coordinates directly without creating temporary layers
-            boxes_shapes = self._compute_box_coordinates(subtile_inner_preds, 
+            boxes_shapes = self._compute_box_coordinates(subtile_inner_preds,
                                                          to_world_key='zone_to_world', use_offset=True)
-            
+
             if subtile_inner_preds['mask'].notna().any():
                 outline_shapes = self._compute_mask_coordinates(subtile_inner_preds,
-                                                               to_world_key='zone_to_world', use_offset=True)
+                                                                to_world_key='zone_to_world', use_offset=True)
 
         # Use unified method to merge and apply shapes
         self._merge_and_apply_shapes(boxes_shapes, outline_shapes)
@@ -1887,7 +2026,7 @@ class MainWindowDetect(QtWidgets.QDialog):
         Parameters:
             chunk (Metashape.Chunk): The 3D chunk object where shapes will be modified and
                 grouped.
-            new_shapes (list): A list of dictionaries containing 'shape' (coordinates), 
+            new_shapes (list): A list of dictionaries containing 'shape' (coordinates),
                 'label' (class label), and 'score' (confidence score) for each shape.
             detected_label (str): Label to be assigned to the created shapes group for
                 organizational purposes, helping to identify added shapes.
@@ -1895,20 +2034,21 @@ class MainWindowDetect(QtWidgets.QDialog):
         shapes_layer = self.chunk.shapes.addGroup()
         shapes_layer.label = detected_label
         shapes_layer.show_labels = True  # Enable labels to show class and score
-        
+
         # Prepare list to collect CSV data
         csv_data = []
-        
+
         for shape_data in new_shapes:
+
             new_shape = chunk.shapes.addShape()
             new_shape.group = shapes_layer
-            
+
             # Get shape coordinates
             corners = shape_data['shape']
-            
+
             # Create polygon geometry
             new_shape.geometry = Metashape.Geometry.Polygon([Metashape.Vector([x, y]) for x, y in corners])
-            
+
             # Set label and score if available
             label = shape_data['label']
             score = shape_data['score']
@@ -1916,6 +2056,10 @@ class MainWindowDetect(QtWidgets.QDialog):
             centroid = shape_data['centroid']
             width = shape_data['width']
             length = shape_data['length']
+
+            if self.isDebugMode:
+                print(
+                    f"label: {label}, score: {score}, area: {area}, centroid: {centroid}, width: {width}, length: {length}")
 
             new_shape.attributes["Width (m)"] = f"{width:.3f}"
             new_shape.attributes["Length (m)"] = f"{length:.3f}"
@@ -1925,7 +2069,7 @@ class MainWindowDetect(QtWidgets.QDialog):
 
             if area is not None:
                 new_shape.attributes["Area 2D (m²)"] = f"{area:.2f}"
-            
+
             # Determine class name
             class_name = 'Unknown'
             if label is not None:
@@ -1933,13 +2077,13 @@ class MainWindowDetect(QtWidgets.QDialog):
                     class_name = self.classes[int(label)]
                 else:
                     class_name = str(label)
-                    
+
                 new_shape.label = class_name
-                
+
             # Add score as attribute
             if score is not None:
                 new_shape.attributes["Score (avg)"] = f"{score:.2f}"
-            
+
             # Collect data for CSV export
             csv_row = {
                 'Label': class_name,
@@ -1950,7 +2094,7 @@ class MainWindowDetect(QtWidgets.QDialog):
                 'Length (m)': f"{length:.3f}"
             }
             csv_data.append(csv_row)
-        
+
         # Export collected data to CSV file
         if csv_data:
             # Create filename with timestamp and detected_label
@@ -1959,15 +2103,15 @@ class MainWindowDetect(QtWidgets.QDialog):
             # safe_label = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in detected_label)
             csv_filename = f"detection_results_{timestamp}.csv"
             csv_filepath = os.path.join(self.dir_detection_results, csv_filename)
-            
+
             # Write CSV file
             with open(csv_filepath, 'w', newline='', encoding='utf-8-sig') as csvfile:
                 fieldnames = ['Label', 'Score (avg)', 'Area 2D (m\u00b2)', 'Centroid', 'Width (m)', 'Length (m)']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                
+
                 writer.writeheader()
                 writer.writerows(csv_data)
-            
+
             print(f"Detection results exported to: {csv_filepath}")
 
     def apply_union_boxes_shapes(self, chunk, new_shapes, detected_label):
@@ -1977,13 +2121,13 @@ class MainWindowDetect(QtWidgets.QDialog):
         This method works by creating a new shapes group to represent the bounding boxes.
         It assigns the provided label to the new shapes layer and populates it with
         polygonal shapes defined by the input list of dictionaries containing box coordinates,
-        class labels, and confidence scores. Each shape is transformed from the orthomosaic 
-        coordinate reference system to the shapes coordinate reference system before being 
+        class labels, and confidence scores. Each shape is transformed from the orthomosaic
+        coordinate reference system to the shapes coordinate reference system before being
         added to the group.
 
         Parameters:
         chunk (Metashape.Chunk): The target chunk to which the shapes are added.
-        new_shapes (list): A list of dictionaries containing 'box' (coordinates in xmin, ymin, xmax, ymax format), 
+        new_shapes (list): A list of dictionaries containing 'box' (coordinates in xmin, ymin, xmax, ymax format),
             'label' (class label), and 'score' (confidence score) for each shape.
         detected_label (str): The label to assign to the newly created shapes layer.
         """
@@ -2019,16 +2163,16 @@ class MainWindowDetect(QtWidgets.QDialog):
 
             if area is not None:
                 new_shape.attributes["Area 2D (m²)"] = f"{area:.2f}"
-            
+
             # Set label and score if available
             if label is not None:
                 if isinstance(label, (int, float)) and 0 <= int(label) < len(self.classes):
                     class_name = self.classes[int(label)]
                 else:
                     class_name = str(label)
-                    
+
                 new_shape.label = class_name
-                
+
             # Add score as attribute
             if score is not None:
                 new_shape.attributes["Score (avg)"] = f"{score:.2f}"
@@ -2036,7 +2180,7 @@ class MainWindowDetect(QtWidgets.QDialog):
     def show_results_dialog(self, results_time_total):
         """
         Displays a dialog showing the total processing time.
-        
+
         Parameters:
             results_time_total (float): Total processing time in seconds.
         """
@@ -2048,7 +2192,7 @@ class MainWindowDetect(QtWidgets.QDialog):
     def create_gui(self):
         """
         Creates and initializes the graphical user interface for the detection dialog.
-        
+
         This method sets up all UI components including input fields, buttons, labels,
         progress bars, and organizes them in a structured layout. It also connects
         signals to appropriate slots for user interaction handling.
@@ -2252,18 +2396,18 @@ class MainWindowDetect(QtWidgets.QDialog):
     def change_debug_mode(self, value):
         """
         Handles changes to the debug mode checkbox state.
-        
+
         Parameters:
             value (bool): The new checkbox state (True for checked, False for unchecked).
         """
         self.isDebugMode = value
         print(f"Debug mode: {'On' if value else 'Off'}")
-    
+
     def save_score_threshold(self, value):
         """Save score threshold value to settings when changed."""
         Metashape.app.settings.setValue("scripts/yolo/score-threshold", str(value))
         print(f"Score threshold saved: {value}")
-    
+
     def save_iou_threshold(self, value):
         """Save IOU threshold value to settings when changed."""
         Metashape.app.settings.setValue("scripts/yolo/iou-threshold", str(value))
@@ -2272,7 +2416,7 @@ class MainWindowDetect(QtWidgets.QDialog):
     def choose_working_dir(self):
         """
         Opens a directory selection dialog and updates the working directory field.
-        
+
         This method allows the user to select a working directory through a file dialog
         and updates the corresponding line edit widget with the selected path.
         """
@@ -2282,7 +2426,7 @@ class MainWindowDetect(QtWidgets.QDialog):
     def choose_model_save_path(self):
         """
         Opens a file dialog to select a path for saving a trained model.
-        
+
         This method retrieves the previously used model directory from settings,
         displays a save file dialog to the user, and updates the model save path
         line edit widget with the selected file path.
@@ -2302,7 +2446,7 @@ class MainWindowDetect(QtWidgets.QDialog):
     def choose_model_load_path(self):
         """
         Opens a file dialog to select a trained model file for loading.
-        
+
         This method displays an open file dialog filtered for model files,
         and updates the model load path line edit widget with the selected file path.
         """
@@ -2313,11 +2457,11 @@ class MainWindowDetect(QtWidgets.QDialog):
     def load_params(self):
         """
         Loads and validates parameters from the GUI for the detection process.
-        
+
         This method retrieves user-configured parameters from the GUI widgets,
         validates them, calculates derived values (like patch size and resolution),
         and prepares the detection zones based on the selected layer.
-        
+
         Raises:
             Exception: If orthomosaic resolution exceeds 10 cm/pix.
         """
@@ -2353,11 +2497,11 @@ class MainWindowDetect(QtWidgets.QDialog):
         self.load_model_path = self.modelLoadPathLineEdit.text()
         self.detection_score_threshold = self.scoreThresholdSpinBox.value()
         self.iou_threshold = self.iouThresholdSpinBox.value()
-        
+
         # Save threshold values to settings
         Metashape.app.settings.setValue("scripts/yolo/score-threshold", str(self.detection_score_threshold))
         Metashape.app.settings.setValue("scripts/yolo/iou-threshold", str(self.iou_threshold))
-        
+
         detectZonesLayer = self.layers[self.detectZonesLayer.currentIndex()]
 
         if detectZonesLayer == self.noDataChoice:
@@ -2385,15 +2529,14 @@ class MainWindowDetect(QtWidgets.QDialog):
             self.check_stopped()
 
             if not shape.group.enabled:
-                    continue
+                continue
 
             if shape.group.key == _zones_key:
                 self.detected_zones.append(shape)
 
-
-
         print("{} zones  loaded in {:.2f} sec".format(len(self.detected_zones),
                                                       time.time() - loading_shapes_start))
+
 
 class CustomDoubleSpinBox(QtWidgets.QDoubleSpinBox):
     """
@@ -2407,6 +2550,7 @@ class CustomDoubleSpinBox(QtWidgets.QDoubleSpinBox):
     ----------
     Inherited from QDoubleSpinBox.
     """
+
     def textFromValue(self, value):
         import re
         text = super(CustomDoubleSpinBox, self).textFromValue(value)
