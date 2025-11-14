@@ -52,7 +52,7 @@ After downloading, you'll need to copy the module to the Agisoft Metashape insta
 *   In your file explorer, navigate to the Agisoft Metashape installation folder. This is typically located at `C:\Program Files\Agisoft\Metashape Pro`.
 *   Copy the downloaded and unzipped `yolo11_detected` folder into the `modules` subfolder.
 
-The final file structure should look like this:
+📂 The final file structure should look like this:
 
 ```
 %programfiles%\Agisoft\Metashape Pro\modules\yolo11_detected/
@@ -74,7 +74,8 @@ You can install the necessary Python packages automatically or manually. The aut
 *   Click `Open` and wait for the installation to complete.
 *   You will see a confirmation message, `Packages installed successfully`, when it is finished.
 
-**What the Automatic Installer Does:**
+**⁉️ What the Automatic Installer Does:**
+
    The script automatically installs the following pinned versions of key libraries:  
    - `numpy==2.0.2`  
    - `pandas==2.2.3`  
