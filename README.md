@@ -66,7 +66,7 @@ After downloading, you'll need to copy the module to the Agisoft Metashape insta
 
 You can install the necessary Python packages automatically or manually. The automatic method is recommended.
 
-#### **Automatic Installation (Recommended)**
+#### **🤖 Automatic Installation (Recommended)**
 
 *   Start Agisoft Metashape.
 *   Go to `Tools > Run Script`.
