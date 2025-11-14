@@ -3,6 +3,7 @@
 A Python module for Agisoft Metashape Professional that enables YOLO-based object detection on orthomosaic images.
 The module can be used for various tasks related to orthomosaic processing, including animal population monitoring, mapping, agriculture, forestry and other areas where automatic detection and classification of objects in aerial photographs is required.
 
+![](assets/img_1.png)
 
 ## Overview
 
