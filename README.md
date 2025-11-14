@@ -3,7 +3,7 @@
 A Python module for Agisoft Metashape Professional that enables YOLO-based object detection on orthomosaic images.
 The module can be used for various tasks related to orthomosaic processing, including animal population monitoring, mapping, agriculture, forestry and other areas where automatic detection and classification of objects in aerial photographs is required.
 
----
+
 ## Overview
 
 This module integrates the YOLO (You Only Look Once) object detection framework Ultralitycs with Agisoft Metashape Professional, allowing users to:
@@ -33,7 +33,7 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
   - scikit-learn==1.6.1
   - albumentations==2.0.5
 
----
+
 ## 🚀 Installation
 
 ### Prerequisites
@@ -141,7 +141,7 @@ For more information on running scripts automatically at startup, refer to the [
 The installation is now complete. The YOLO Object Detection module will be available the next time you launch Agisoft Metashape.
 
 
----
+
 
 ## Usage
 
@@ -184,7 +184,7 @@ Run object detection on orthomosaics using YOLO models (default: `yolo11x-seg.pt
 
 > ✅ GPU acceleration strongly recommended.
 
----
+
 
 ### 2. Create YOLO Dataset  
 **Menu:** `Scripts > YOLO Tools > Create YOLO Dataset`
@@ -239,7 +239,7 @@ nc: 3
 names: ['car', 'tree', 'building']
 ```
 
----
+
 
 ## Technical Notes
 
@@ -252,7 +252,7 @@ names: ['car', 'tree', 'building']
 - For best accuracy: use orthomosaics ≥ 0.1 m/pix resolution  
 - Custom model training: use exported dataset + [Ultralytics YOLO](https://docs.ultralytics.com/)
 
----
+
 
 ## Credits  
 Based on:
