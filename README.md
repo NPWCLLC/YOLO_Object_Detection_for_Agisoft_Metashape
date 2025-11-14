@@ -3,6 +3,7 @@
 A Python module for Agisoft Metashape Professional that enables YOLO-based object detection on orthomosaic images.
 The module can be used for various tasks related to orthomosaic processing, including animal population monitoring, mapping, agriculture, forestry and other areas where automatic detection and classification of objects in aerial photographs is required.
 
+---
 ## Overview
 
 This module integrates the YOLO (You Only Look Once) object detection framework Ultralitycs with Agisoft Metashape Professional, allowing users to:
@@ -32,199 +33,228 @@ OR see your cuda version for torch and torchvision at https://pytorch.org/get-st
   - scikit-learn==1.6.1
   - albumentations==2.0.5
 
+---
 ## 🚀 Installation
+
+### Prerequisites
+
+*   Agisoft Metashape is installed.
+*   For GPU acceleration, an NVIDIA GPU is required with the appropriate CUDA drivers installed.
 
 ### Windows Installation
 
-📥[Download](https://github.com/NPWCLLC/YOLO_Object_Detection_for_Agisoft_Metashape/archive/refs/heads/main.zip) the module from this repository and follow these steps:
+**1. Download and Place the Module**
 
-> Let's say %programfiles% - this is the location of the Agisoft Metashape installation
+📥 **[Download the module files here.](https://github.com/NPWCLLC/YOLO_Object_Detection_for_Agisoft_Metashape/archive/refs/heads/main.zip)**
 
-1. Copy the module to the Agisoft modules directory:
-   - Copy the files project to folder `%programfiles%\Agisoft\modules\yolo11_detected`
-   ```
-   %programfiles%\Agisoft\modules\yolo11_detected/
-    ├── __init__.py
-    ├── auto_install_packages.py
-    ├── create_yolo_dataset.py
-    └── detect_yolo.py
-   ```
-2. Install the required packages:
+After downloading, you'll need to copy the module to the Agisoft Metashape installation directory.
 
-    #### **Automatic installation of required packages**
-    Start Metashape and run python script `auto_install_packages.py`
-    - Open Metashape and go to `Tools > Run Script`
-    - Select the file `auto_install_packages.py` in the directory `%programfiles%\Agisoft\modules\yolo11_detected`
-    - Click `Run`
-    - Wait for the automatic installation of required packages..
-    You see the message `Packages installed successfully`:
+*   In your file explorer, navigate to the Agisoft Metashape installation folder. This is typically located at `C:\Program Files\Agisoft\Metashape Pro`.
+*   Copy the downloaded and unzipped `yolo11_detected` folder into the `modules` subfolder.
 
-    #### **Manual installation of required packages**
-    See [How to install external Python module to Metashape Professional package](https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package)
-    
-    Install CUDA-enabled PyTorch (for GPU acceleration):
-    - Check in a terminal window your cuda version nvidia-smi. See your cuda version for torch and torchvision at https://pytorch.org/get-started/previous-versions/ for python 3.9
-    
-   And install the following packages:
+The final file structure should look like this:
 
-    - numpy==2.0.2 
-    - pandas==2.2.3 
-    - opencv-python==4.11.0.86 
-    - shapely==2.0.7 
-    - pathlib==1.0.1 
-    - Rtree==1.3.0 
-    - tqdm==4.67.1 
-    - ultralytics 
-    - torch
-    - torchvision
-    - scikit-learn==1.6.1 
-    - albumentations==2.0.5 
-   
-    > Install Packages: python.exe -m pip install <packages_names>
-
-    > You can always delete previously installed packages: python.exe -m pip uninstall -y <packages_names>
-
-3. Create a file `run_scripts.py` in the directory `C:/Users /<username>/AppData/Local/Agisoft/Metashape Pro/scripts/`.
-   - Open file `run_scripts.py` in the text editor and add the following line, save and close the file:
-   
-   ```python
-   from modules import yolo11_detected
-   ```
-   [How to run Python script automatically on Metashape Professional start.](https://agisoft.freshdesk.com/support/solutions/articles/31000133123-how-to-run-python-script-automatically-on-metashape-professional-start)
-
-
-## Usage 
-After installation, two new menu items will be available in Metashape under the "Scripts > YOLO Tools" menu:
-
-### 1. YOLO Object Detection
-
-Access via: `Scripts > YOLO Tools > Prediction`
-
-This tool allows you to detect objects on orthomosaic images using YOLO models (default model 'yolo11x-seg.pt'). 
-
-### Features include:
-- Detection using pre-trained or custom models
-- Option to detect in specific zones or the entire orthomosaic
-- Adjustable detection parameters (confidence threshold, iou threshold, resolution, etc.)
-- Results are saved as shapes in the Metashape project and exported in format CSV in your workdir.
-
-  **Output file result csv:**
-    - Label
-    - Score (avg)
-    - Area 2D (m²)
-    - Centroid (x,y)
-    - Width (m)
-   - Length (m)
-
-**Requirements:**
-- An active orthomosaic with resolution ≤ 10 cm/pixel
-
-### Configuration Options
-
-The module provides several configuration options:
-
-- **Working Directory**: Directory for temporary files and results
-- **Resolution**: Preferred resolution for detection (default 0.5 cm/pix)
-- **Debug Mode**: Enabling/disabling debugging information, cut-out objects and their coordinates in the working directory are added to the results of each prediction.
-- **Max size tiles**: Maximum size of tiles for processing crop
-- **Layer zones**: Polygons for forecasting
-- **Model path**: The path to the YOLO model file (you can specify the pre-trained YOLO Ultralitycs model in the format `yolo11x-seg.pt ` - see all models for detection and segmentation on https://docs.ultralytics.com/ru/models /)
-- **Detection Parameters**:
-  - Confidence Threshold: Minimum confidence score for detections
-  - IOU Threshold: The threshold of crossing over the union
-
-### 2. Create YOLO Dataset
-
-Access via: `Scripts > YOLO Tools > Create yolo dataset`
-
-This tool helps you create datasets in YOLO format for training custom models:
-- Export orthomosaic tiles with annotations
-- Support for data augmentation
-- Split data into training and validation sets
-- Generate base YAML configuration files for YOLO training
-
-## Configuration Options
-
-The module provides several configuration options:
-
-- **Working Directory**: Directory for temporary files and results
-- **Resolution**: Preferred resolution for detection (default 0.5 cm/pix)
-- **Debug Mode**: Enabling/disabling debugging information, tile images with annotations are added to the working directory.
-- **Max size tiles**: Maximum size of tiles for processing crop
-- **Layer zones**: Polygons annotations objects
-- **Layer data**: Layer with annotations objects
-- **Splitting data**: Specify the percentage of train sets (default train 0.8, val 0.2)
-- **Proportion background**: Specify the percentage of background images without objects.
-- **Augment data**: Add augmentation. Seven basic image transformations are used:
-  - Rotate by 90 degrees
-  - Rotate 180 degrees 
-  - Rotate 270 degrees
-  - Mirror image
-  - Mirror image and rotate 90
-  - Mirror image and rotate 180
-  - Mirror image and rotate 270
-- **Random augment colors**: Random augment colors: Random color conversion, adding noise:
-  - HueSaturationValue(hue_shift_limit=360, sat_shift_limit=30, val_shift_limit=20)
-  - ISONoise(p=0.5)
-  - RandomBrightnessContrast(brightness_limit=0.4, contrast_limit=0, p=0.5)
-- **Mode**: Use boxes or outlines of annotated objects
-
-**Dataset directory structure**
 ```
-   dataset_yolo/
-   ├── data.yaml
-   ├── train/
-   │   ├── images/
-   │   └── labels/
-   └── val/
-       ├── images/
-       └── labels/
-   ```
+%programfiles%\Agisoft\Metashape Pro\modules\yolo11_detected/
+ ├── __init__.py
+ ├── auto_install_packages.py
+ ├── create_yolo_dataset.py
+ └── detect_yolo.py
+```
 
-**Annotation format**:
-- For object detection:
-```
-     <class_id> <x_center_norm> <y_center_norm> <width_norm> <height_norm>
-```
-- For segmentation:
-```
-     <class_id> <x1> <y1> <x2> <y2> ... <xn> <yn>
-```
-   where `class_id` is the class identifier, and the coordinates are normalized by the size of the image.
+**2. Install Required Packages**
 
-**Data.yaml file**:
+You can install the necessary Python packages automatically or manually. The automatic method is recommended.
+
+#### **Automatic Installation (Recommended)**
+
+*   Start Agisoft Metashape.
+*   Go to `Tools > Run Script`.
+*   Navigate to the module directory (`%programfiles%\Agisoft\Metashape Pro\modules\yolo11_detected`) and select the `auto_install_packages.py` file.
+*   Click `Open` and wait for the installation to complete.
+*   You will see a confirmation message, `Packages installed successfully`, when it is finished.
+
+**What the Automatic Installer Does:**
+   The script automatically installs the following pinned versions of key libraries:  
+   - `numpy==2.0.2`  
+   - `pandas==2.2.3`  
+   - `opencv-python==4.11.0.86`  
+   - `shapely==2.0.7`  
+   - `pathlib==1.0.1`  
+   - `Rtree==1.3.0`  
+   - `tqdm==4.67.1`  
+   - `ultralytics` (latest version)  
+   - `scikit-learn==1.6.1`  
+   - `albumentations==2.0.5`  
+
+   **Removes Default PyTorch Dependencies**  
+   After installing `ultralytics`, the script uninstalls the default `torch` and `torchvision` packages that were automatically pulled in as dependencies (which may not be CUDA-optimized or compatible with your system).
+
+   **Detects CUDA Version & Installs Optimized PyTorch**  
+   The installer runs `nvidia-smi` to detect your system’s CUDA driver version, then installs the *officially recommended* versions of `torch` and `torchvision` that match your CUDA environment—ensuring optimal performance and GPU support.
+
+> ✅ **Result**: A clean, GPU-ready environment with version-controlled dependencies and CUDA-optimized PyTorch—no manual configuration needed.
+
+#### **Manual Installation**
+
+If you prefer to install the packages manually, you can find detailed instructions on how to add external Python modules to Metashape [here](https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-metashape-professional-package).
+
+For GPU acceleration with PyTorch, ensure you install a version compatible with your CUDA setup. You can check your CUDA version by running `nvidia-smi` in a terminal and find the corresponding PyTorch versions [here](https://pytorch.org/get-started/previous-versions/).
+
+**Important Note on PyTorch Installation for GPU Acceleration:**
+The ultralytics package will automatically install torch and torchvision, but these are typically the CPU-only versions. To enable GPU acceleration, you must first install ultralytics, then uninstall the default torch and torchvision, and finally install the versions that correspond to your CUDA toolkit.
+
+Install the following packages using the pip command in the Metashape Python console:
+`python.exe -m pip install <package_name>`
+
+*   `numpy==2.0.2`
+*   `pandas==2.2.3`
+*   `opencv-python==4.11.0.86`
+*   `shapely==2.0.7`
+*   `pathlib==1.0.1`
+*   `Rtree==1.3.0`
+*   `tqdm==4.67.1`
+*   `ultralytics`
+*   `scikit-learn==1.6.1`
+*   `albumentations==2.0.5`
+*   `torch` (CUDA version specific, see [PyTorch previous versions](https://pytorch.org/get-started/previous-versions/))
+*   `torchvision` (CUDA version specific, see [PyTorch previous versions](https://pytorch.org/get-started/previous-versions/))
+
+> **Tip:** You can uninstall packages if needed with the command: `python.exe -m pip uninstall -y <package_name>`
+
+**3. Enable Automatic Script Loading**
+
+To ensure the module is loaded every time you start Metashape, you need to create a simple script in your user directory.
+
+*   Navigate to `C:\Users\<YourUsername>\AppData\Local\Agisoft\Metashape Pro\scripts\`.
+*   Create a new file named `run_scripts.py`.
+*   Open this file in a text editor and add the following line:
+
+```python
+from modules import yolo11_detected
+```
+
+*   Save and close the file.
+
+For more information on running scripts automatically at startup, refer to the [official Agisoft documentation](https://agisoft.freshdesk.com/support/solutions/articles/31000133123-how-to-run-python-script-automatically-on-metashape-professional-start).
+
+The installation is now complete. The YOLO Object Detection module will be available the next time you launch Agisoft Metashape.
+
+
+---
+
+## Usage
+
+After installation, two new menu items appear under **Scripts > YOLO Tools** in Metashape:
+
+
+### 1. YOLO Object Detection  
+**Menu:** `Scripts > YOLO Tools > Prediction`
+
+Run object detection on orthomosaics using YOLO models (default: `yolo11x-seg.pt`).
+
+#### Features:
+- Supports pre-trained or custom YOLO models (e.g., YOLOv8–YOLO11)
+- Detect on the full orthomosaic or within user-defined polygon zones
+- Adjustable parameters: confidence threshold, IoU threshold, resolution, etc.
+- Results saved as **vector shapes** in the Metashape project and exported to **CSV** in the working directory.
+
+**CSV Output Columns:**
+- `Label`
+- `Score (avg)`
+- `Area 2D (m²)`
+- `Centroid (x, y)`
+- `Width (m)`
+- `Length (m)`
+
+#### Requirements:
+- Orthomosaic resolution ≤ 10 cm/pixel
+
+#### Configuration Options:
+| Option | Description                                                                                                                    |
+|--------|--------------------------------------------------------------------------------------------------------------------------------|
+| **Working Directory** | Directory for temp files and outputs                                                                                           |
+| **Resolution** | Detection resolution (default: 0.5 cm/pix)                                                                                     |
+| **Debug Mode** | Saves cropped detections + coordinates for inspection                                                                          |
+| **Max Tile Size** | Max tile dimension (px); orthomosaics are tiled for processing                                                                 |
+| **Zone Layer** | Optional polygon layer defining detection regions                                                                              |
+| **Model Path** | Path to `.pt` model (e.g., `yolo11x-seg.pt`). See supported models: [Ultralytics Models](https://docs.ultralytics.com/models/) |
+| **Confidence Threshold** | Min detection score (default: 0.9)                                                                                             |
+| **IoU Threshold** | Merge intersection-over-union cutoff (default: 0.6)                                                                            |
+
+> ✅ GPU acceleration strongly recommended.
+
+---
+
+### 2. Create YOLO Dataset  
+**Menu:** `Scripts > YOLO Tools > Create YOLO Dataset`
+
+Generates YOLO-formatted datasets from orthomosaic + vector annotations for model training.
+
+#### Features:
+- Exports tiles with labels (bounding boxes or polygons)
+- Built-in data augmentation (rotation, mirroring, color/noise transforms)
+- Splits data into `train`/`val` sets
+- Auto-generates `data.yaml` config
+
+#### Configuration Options:
+| Option | Description |
+|--------|-------------|
+| **Working Directory** | Output base path |
+| **Resolution** | Export resolution (default: 0.5 cm/pix) |
+| **Debug Mode** | Saves annotated tile previews |
+| **Max Tile Size** | Tile dimension (px) |
+| **Zone Layer** | Optional AOI polygons |
+| **Annotation Layer** | Required: vector layer with labeled objects |
+| **Train/Val Split** | Ratio (default: 80% train / 20% val) |
+| **Background Ratio** | % of tiles *without* objects (default: 0%) |
+| **Augmentation** | Enables geometric transforms (7 rotations/mirrors) |
+| **Color Augmentation** | Random HSV shifts, ISO noise, brightness/contrast |
+| **Mode** | Export boxes (`detect`) or polygons (`segment`) |
+
+#### Dataset Structure:
+```
+dataset_yolo/
+├── data.yaml
+├── train/
+│   ├── images/
+│   └── labels/
+└── val/
+    ├── images/
+    └── labels/
+```
+
+#### Label Formats:
+- **Detection (YOLOv8+ format):**  
+  `<class_id> <x_center> <y_center> <width> <height>`  
+- **Segmentation:**  
+  `<class_id> <x1> <y1> <x2> <y2> ... <xn> <yn>`  
+  *(All coordinates normalized to [0,1])*  
+
+#### `data.yaml` Example:
 ```yaml
-   train: train/images
-   val: val/images
-   nc: <number_of_classes>
-   names: [<class_name_1>, <class_name_2>, ...]
+train: train/images
+val: val/images
+nc: 3
+names: ['car', 'tree', 'building']
 ```
 
-## Notes
+---
 
-- The orthomosaic should have a resolution of 10 cm/pixel or better for optimal results
-- GPU acceleration is recommended for faster processing
-- Custom models can be trained using the dataset creation tool and the Ultralytics YOLO framework
+## Technical Notes
 
-### Processing of large orthomosaic
+- **Orthomosaic size handling**: Large rasters are processed via:
+  * Tiling with overlap
+  * Per-tile inference
+  * NMS-based merge of overlapping detections  
+- **Coordinate pipeline**:  
+  World → Pixel (tile extraction) → Tile pixel → Orthomosaic pixel → World (shape placement)  
+- For best accuracy: use orthomosaics ≥ 0.1 m/pix resolution  
+- Custom model training: use exported dataset + [Ultralytics YOLO](https://docs.ultralytics.com/)
 
-Orthomosaic created from aerial photography can be huge (tens of thousands of pixels in each dimension). For effective processing of such images, the module uses the following approaches:
+---
 
-1. **Tile division**: The orthomosaic is divided into fixed-size tiles, which are processed separately.
-2. **Tile Overlap**: Tiles overlap so that objects located on tile borders are fully visible in at least one tile.
-3. **Processing of overlapping detections**: A non-maximum suppression algorithm is applied to eliminate duplicate detections in overlapping areas.
-
-### Coordinate transformation
-
-The module performs several coordinate transformations:
-
-1. **From world coordinates to pixel coordinates**: To extract tiles from an orthomosaic.
-2. **From pixel coordinates of the tile to pixel coordinates of the orthomosaic**: To combine detection results from different tiles.
-3. **From pixel coordinates of the orthomosaic to world coordinates**: To create vector objects in Metashape.
-
-## Credits
-
-This module is based on:
-
-- [Agisoft Metashape Scripts](https://github.com/agisoft-llc/metashape-scripts/blob/master/src/detect_objects.py)
-- [Ultralytics YOLO Documentation](https://docs.ultralytics.com/)
+## Credits  
+Based on:
+- [Metashape Detect Objects Script](https://github.com/agisoft-llc/metashape-scripts/blob/master/src/detect_objects.py)  
+- [Ultralytics YOLO Docs](https://docs.ultralytics.com/)  
